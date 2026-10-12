@@ -57,9 +57,9 @@ type SentenceToken =
 const WORD_PATTERN = /([A-Za-z0-9]+(?:'[A-Za-z0-9]+)?)|([^A-Za-z0-9]+)/g;
 const BLANK_WIDTH_PADDING_CH = 1;
 const MIN_BLANK_WIDTH_CH = 2;
-const FIRST_WORD_INDEX = 0;
 const SPACE_LONG_PRESS_MS = 400;
 const WORD_HINT_LETTER_COUNT = 2;
+const LETTER_CHARACTER_PATTERN = /[A-Za-z]/;
 
 function wordHintPrefix(word: string): string {
   return word.slice(0, Math.min(WORD_HINT_LETTER_COUNT, word.length));
@@ -79,9 +79,40 @@ const VaultDueState = {
 
 type VaultDueStateId = (typeof VaultDueState)[keyof typeof VaultDueState];
 
-function capitalizeFirstLetter(value: string): string {
-  if (value.length === 0) return value;
-  return value[0].toUpperCase() + value.slice(1);
+function isLetterCharacter(character: string): boolean {
+  return LETTER_CHARACTER_PATTERN.test(character);
+}
+
+function applyExpectedLetterCase(
+  typedLetter: string,
+  expectedLetter: string,
+): string {
+  if (expectedLetter === expectedLetter.toUpperCase()) {
+    return typedLetter.toUpperCase();
+  }
+  if (expectedLetter === expectedLetter.toLowerCase()) {
+    return typedLetter.toLowerCase();
+  }
+  return typedLetter;
+}
+
+/** 字母大小写跟随原句对应位置；数字等其它字符原样保留。 */
+function shapeTypedAnswer(typed: string, expected: string): string {
+  let result = '';
+  for (let index = 0; index < typed.length; index += 1) {
+    const typedCharacter = typed[index];
+    const expectedCharacter = expected[index];
+    if (
+      expectedCharacter !== undefined &&
+      isLetterCharacter(typedCharacter) &&
+      isLetterCharacter(expectedCharacter)
+    ) {
+      result += applyExpectedLetterCase(typedCharacter, expectedCharacter);
+    } else {
+      result += typedCharacter;
+    }
+  }
+  return result;
 }
 
 function isPassedJudgment(judgment: Judgment, revealed?: boolean): boolean {
@@ -272,16 +303,18 @@ export default function App() {
     [tokens],
   );
 
-  currentRef.current = current;
-  resultRef.current = result;
-  wordAnswersRef.current = wordAnswers;
-  wordCountRef.current = wordCount;
-  expectedWordsRef.current = tokens
+  const expectedWords = tokens
     .filter(
       (token): token is Extract<SentenceToken, { type: 'word' }> =>
         token.type === 'word',
     )
     .map((token) => token.text);
+
+  currentRef.current = current;
+  resultRef.current = result;
+  wordAnswersRef.current = wordAnswers;
+  wordCountRef.current = wordCount;
+  expectedWordsRef.current = expectedWords;
 
   const clearSpaceHint = () => {
     if (spaceLongPressTimerRef.current !== undefined) {
@@ -672,18 +705,15 @@ export default function App() {
     event: ChangeEvent<HTMLInputElement>,
   ) => {
     if (result) return;
+    const expectedWord = expectedWordsRef.current[wordIndex] ?? '';
     const stripped = event.target.value.replace(/\s+/g, '');
-    const raw =
-      wordIndex === FIRST_WORD_INDEX
-        ? capitalizeFirstLetter(stripped)
-        : stripped;
+    const raw = shapeTypedAnswer(stripped, expectedWord);
     setWordAnswers((currentAnswers) => {
       const next = [...currentAnswers];
       next[wordIndex] = raw;
       return next;
     });
 
-    const expectedWord = expectedWordsRef.current[wordIndex] ?? '';
     const wordMatched = normalize(raw) === normalize(expectedWord);
     if (!wordMatched) return;
 
