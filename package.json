@@ -1,0 +1,27 @@
+{
+  "name": "sentence-memory",
+  "version": "1.0.1",
+  "description": "划词翻译，一键保存，看中文写英文复习。",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@wxt-dev/module-react": "^1.2.2",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3",
+    "wxt": "^0.21.4"
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}
